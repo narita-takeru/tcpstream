@@ -1,8 +1,4 @@
 
-<h1 align="center">
-    <img alt="tcpstream" src="https://github.com/narita-takeru/tcpstream/blob/master/explain.png" />
-</h1>
-
 # tcpstream
 
 tcpstream is simple handling of tcp communication data.<br/>
@@ -10,6 +6,12 @@ This is very easy usability.
 
 If you want hook or look tcp raw data.<br/>
 tcpstream will help you :D
+
+## Example image
+
+<h1 align="center">
+    <img alt="tcpstream" src="https://github.com/narita-takeru/tcpstream/blob/master/explain.png" />
+</h1>
 
 ## Installation
 
