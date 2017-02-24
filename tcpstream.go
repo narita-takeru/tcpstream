@@ -37,6 +37,7 @@ func (t *Thread) Do(src, dst string) {
 
 		dstConn, err := net.DialTCP("tcp", nil, dstAddr)
 		if err != nil {
+			srcConn.Close()
 			continue
 		}
 
@@ -48,15 +49,31 @@ func (t *Thread) do(src, dst io.ReadWriteCloser) {
 
 	defer src.Close()
 	defer dst.Close()
-	go flow(src, dst, t.SrcToDstHook)
-	flow(dst, src, t.DstToSrcHook)
+
+	done := make(chan struct{}, 0)
+
+	wk := worker{}
+	go wk.flow(src, dst, t.SrcToDstHook, done)
+	go wk.flow(dst, src, t.DstToSrcHook, done)
+
+	<-done
 }
 
-func flow(src, dst io.ReadWriter, hook func(b []byte)) {
+type worker struct {
+	closed bool
+}
+
+func (wk *worker) flow(src, dst io.ReadWriter, hook func(b []byte), done chan struct{}) {
+
 	buff := make([]byte, 0xffff)
 	for {
 		n, err := src.Read(buff)
 		if err != nil {
+			if !wk.closed {
+				wk.closed = true
+				close(done)
+			}
+
 			return
 		}
 
