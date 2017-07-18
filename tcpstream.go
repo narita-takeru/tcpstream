@@ -7,8 +7,8 @@ import (
 )
 
 type Thread struct {
-	SrcToDstHook func(b []byte) []byte
-	DstToSrcHook func(b []byte) []byte
+	SrcToDstHook func(id, seq int, b []byte) []byte
+	DstToSrcHook func(id, seq int, b []byte) []byte
 }
 
 func (t *Thread) Do(src, dst string) {
@@ -28,7 +28,7 @@ func (t *Thread) Do(src, dst string) {
 		panic(err)
 	}
 
-	for {
+	for i := 0; true; i++ {
 		srcConn, err := listener.AcceptTCP()
 		if err != nil {
 			fmt.Println(err)
@@ -41,11 +41,11 @@ func (t *Thread) Do(src, dst string) {
 			continue
 		}
 
-		go t.do(srcConn, dstConn)
+		go t.do(i, srcConn, dstConn)
 	}
 }
 
-func (t *Thread) do(src, dst io.ReadWriteCloser) {
+func (t *Thread) do(id int, src, dst io.ReadWriteCloser) {
 
 	defer src.Close()
 	defer dst.Close()
@@ -53,8 +53,8 @@ func (t *Thread) do(src, dst io.ReadWriteCloser) {
 	done := make(chan struct{}, 0)
 
 	wk := worker{}
-	go wk.flow(src, dst, t.SrcToDstHook, done)
-	go wk.flow(dst, src, t.DstToSrcHook, done)
+	go wk.flow(id, src, dst, t.SrcToDstHook, done)
+	go wk.flow(id, dst, src, t.DstToSrcHook, done)
 
 	<-done
 }
@@ -63,10 +63,10 @@ type worker struct {
 	closed bool
 }
 
-func (wk *worker) flow(src, dst io.ReadWriter, hook func(b []byte) []byte, done chan struct{}) {
+func (wk *worker) flow(id int, src, dst io.ReadWriter, hook func(id, seq int, b []byte) []byte, done chan struct{}) {
 
 	buff := make([]byte, 0xffff)
-	for {
+	for i := 0; true; i++ {
 		n, err := src.Read(buff)
 		if err != nil {
 			if !wk.closed {
@@ -79,7 +79,7 @@ func (wk *worker) flow(src, dst io.ReadWriter, hook func(b []byte) []byte, done 
 
 		b := buff[:n]
 		if hook != nil {
-			b = hook(b)
+			b = hook(id, i, b)
 		}
 
 		dst.Write(b)
