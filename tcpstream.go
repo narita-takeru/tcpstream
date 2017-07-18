@@ -7,8 +7,8 @@ import (
 )
 
 type Thread struct {
-	SrcToDstHook func(b []byte)
-	DstToSrcHook func(b []byte)
+	SrcToDstHook func(b []byte) []byte
+	DstToSrcHook func(b []byte) []byte
 }
 
 func (t *Thread) Do(src, dst string) {
@@ -63,7 +63,7 @@ type worker struct {
 	closed bool
 }
 
-func (wk *worker) flow(src, dst io.ReadWriter, hook func(b []byte), done chan struct{}) {
+func (wk *worker) flow(src, dst io.ReadWriter, hook func(b []byte) []byte, done chan struct{}) {
 
 	buff := make([]byte, 0xffff)
 	for {
@@ -79,7 +79,7 @@ func (wk *worker) flow(src, dst io.ReadWriter, hook func(b []byte), done chan st
 
 		b := buff[:n]
 		if hook != nil {
-			hook(b)
+			b = hook(b)
 		}
 
 		dst.Write(b)
